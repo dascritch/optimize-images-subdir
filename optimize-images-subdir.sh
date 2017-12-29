@@ -2,6 +2,8 @@
 
 # By Xavier "DaScritch" Mouton-Dubosc
 # Licence : GPL
+# TODO ; - Option to act on all : will process the whole directory, not the newest only
+# TODO : - Option to simulate : only logs impactable images
 # TODO : - Option to restore any jpegs from BACKUP_DIR
 # TODO : - Option to process any jpegs from BACKUP_DIR
 # TODO : - Indicate size won
@@ -11,14 +13,20 @@ set -e
 
 PREFERED_JPEG_QUALITY="high"
 MINIMUM_JPEG_QUALITY=75
+SIMULATION=n
+NEWER=y
+FIRST_POS=1
 
 HELP=$(cat <<-HELP
 Usage: optimize_images.sh [OPTIONS] OPTIMIZABLE_DIR [BACKUP_DIR]
 Will parse a directory to find optimizable images files, mainly JPEG images.
 
 Parameters:
-        -h, --help              Will show this message
-        OPTIMIZABLE_DIR         Path to sub directory to scan. Mandatory
+        -h, --help              Will show this message.
+#       -s, --simulate          Will only logs impactable images.
+#       -a, --all               Will process on any images. 
+                                Default : Process only on images newer than last run.
+        OPTIMIZABLE_DIR         Path to sub directory to scan. Mandatory.
         BACKUP_DIR              Path to a backup sub-directory, where files
                                 will be copied before processing.
 
@@ -37,6 +45,10 @@ case $option in
         -h|--help)
                 echo "$HELP"
                 exit 0
+        ;;
+        -s|--simulate)
+                SIMULATION=y
+                FIRST_POS=$((FIRST_POS+1))
         ;;
 esac
 
@@ -79,24 +91,38 @@ if [ -f ${PROCESSED_FLAG_FILE} ] ; then
         RECENTLER_OPTION="-anewer ${PROCESSED_FLAG_FILE}"
 fi
 
+
 function _optimize_file() {
+        if [ "y" == $SIMULATION ] ; then
+                return
+        fi
+        FILENAME=${1}
+        # jpeg-recompress --quality ${PREFERED_JPEG_QUALITY} --min ${MINIMUM_JPEG_QUALITY} --method smallfry --accurate "${FILENAME}" "${FILENAME}"
+        # exiftool -overwrite_original -all= "${FILENAME}"
+
+}
+
+function _process_file() {
         # See https://guides.wp-bullet.com/batch-optimize-jpg-lossy-linux-command-line-with-jpeg-recompress/
 
         FILENAME=${1}
         BACKUP_FILENAME=${FILENAME/$OPTIMIZABLE_DIR/$BACKUP_DIR}
         echo "— ${FILENAME}   ${BACKUP_FILENAME}"
-        BACKUP_DIRNAME=$(dirname "${BACKUP_FILENAME}")
-        # replace OPTIMIZABLE_DIR in DIRNAME with BACKUP_DIR
-        # jpeg-recompress --quality ${PREFERED_JPEG_QUALITY} --min ${MINIMUM_JPEG_QUALITY} --method smallfry --accurate "${FILENAME}" "${FILENAME}"
-        # exiftool -overwrite_original -all= "${FILENAME}"
+        if [ "" != "${BACKUP_DIR}" ] ; then
+                BACKUP_DIRNAME=$(dirname "${BACKUP_FILENAME}")
+                # mkdir -p "${BACKUP_DIRNAME}"
+                # cp "${FILENAME}" "${BACKUP_FILENAME}"
+        fi
+        _optimize_file ${FILENAME}
 }
 
 for filename in `find ${OPTIMIZABLE_DIR} -type f -iname "*.jpg" ${RECENTLER_OPTION}` ; do
         # The “for” loop is an obligation, as find -exec command cannot call a shell function
         # I know it may crashes as the response from the find command will be very long
-        _optimize_file "${filename}"
+        _process_file "${filename}"
 done
 
 du -sh ${OPTIMIZABLE_DIR}
 
 touch ${PROCESSED_FLAG_FILE}
+
