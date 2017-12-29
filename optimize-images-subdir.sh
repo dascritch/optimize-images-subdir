@@ -50,6 +50,7 @@ function _check_dirs() {
                 echo "Missing optimizable directory parameter"
                 exit -1
         fi
+        OPTIMIZABLE_DIR=$(realpath ${OPTIMIZABLE_DIR})
 
         if [ ! -d "${OPTIMIZABLE_DIR}" ] ; then
                 echo "Inexisting optimizable directory"
@@ -57,6 +58,8 @@ function _check_dirs() {
         fi
 
         if [ "" != "${BACKUP_DIR}" ] ; then
+                BACKUP_DIR=$(realpath ${BACKUP_DIR})
+
                 if [ ! -d "${BACKUP_DIR}" ] ; then
                         echo "Inexisting backup directory parameter"
                         exit -1
