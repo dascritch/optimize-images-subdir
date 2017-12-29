@@ -52,8 +52,8 @@ case $option in
         ;;
 esac
 
-OPTIMIZABLE_DIR=$1
-BACKUP_DIR=$2
+OPTIMIZABLE_DIR=${FIRST_POS}
+BACKUP_DIR=$((FIRST_POS+1))
 
 du -sh ${OPTIMIZABLE_DIR}
 
